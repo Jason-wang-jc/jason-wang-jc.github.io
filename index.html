@@ -1,10 +1,256 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>我的 GitHub Pages 网站</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>从夯到拉测评</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        html, body {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #f4f4f4;
+        }
+        .container {
+            padding: 10px;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .title {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .buttons {
+            text-align: center;
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px 18px;
+            margin: 0 4px;
+            border: none;
+            border-radius: 6px;
+            background: #333;
+            color: white;
+            font-size: 15px;
+        }
+        .clear {
+            background: #e53935;
+        }
+        .preview {
+            text-align: center;
+            height: 150px;
+            line-height: 150px;
+            margin: 10px 0;
+        }
+        .preview img {
+            max-width: 140px;
+            max-height: 140px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            vertical-align: middle;
+        }
+        .tier {
+            border: 2px solid #000;
+            background: #eee;
+        }
+        .row {
+            display: flex;
+            min-height: 75px;
+            border-bottom: 1px solid #000;
+        }
+        .row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            width: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 19px;
+            border-right: 2px solid #000;
+        }
+        .area {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            padding: 5px;
+            align-content: flex-start;
+        }
+        .area img {
+            width: 55px;
+            height: 55px;
+            object-fit: cover;
+            margin: 2px;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Hello, GitHub Pages!</h1>
-    <p>我的第一个免费网站。</p >
+    <div class="container">
+        <div class="title">从夯到拉 测评表</div>
+        <div class="buttons">
+            <button id="uploadBtn">📷 上传图片</button>
+            <button id="resetBtn" class="clear">清空重置</button>
+        </div>
+        <div class="preview" id="previewBox"></div>
+        <div class="tier">
+            <div class="row">
+                <div class="label" style="background:#ff4444;color:#fff;">夯</div>
+                <div class="area"></div>
+            </div>
+            <div class="row">
+                <div class="label" style="background:#ff9800;">顶级</div>
+                <div class="area"></div>
+            </div>
+            <div class="row">
+                <div class="label" style="background:#ffeb3b;">人上人</div>
+                <div class="area"></div>
+            </div>
+            <div class="row">
+                <div class="label" style="background:#fff3e0;">NPC</div>
+                <div class="area"></div>
+            </div>
+            <div class="row">
+                <div class="label" style="background:#fff;">拉完了</div>
+                <div class="area"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+let images = [];
+let currentIndex = 0;
+let dragImage = null;
+
+const uploadBtn = document.getElementById('uploadBtn');
+const resetBtn = document.getElementById('resetBtn');
+const previewBox = document.getElementById('previewBox');
+const tierAreas = document.querySelectorAll('.area');
+
+// 关键修复：直接在HTML里放input，而不是动态创建
+const fileInput = document.createElement('input');
+fileInput.type = 'file';
+fileInput.accept = 'image/*';
+fileInput.multiple = true;
+fileInput.style.display = 'none';
+document.body.appendChild(fileInput);
+
+uploadBtn.addEventListener('click', function() {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', function(e) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    images = [];
+    currentIndex = 0;
+    let loadedCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            images.push(event.target.result);
+            loadedCount++;
+            if (loadedCount === files.length) {
+                showNextImage();
+            }
+        };
+        reader.readAsDataURL(files[i]);
+    }
+});
+
+function showNextImage() {
+    previewBox.innerHTML = '';
+    if (currentIndex >= images.length) {
+        previewBox.innerHTML = '<div style="color:green;font-size:17px">✅ 全部测评完成！</div>';
+        return;
+    }
+
+    const img = document.createElement('img');
+    img.src = images[currentIndex];
+    previewBox.appendChild(img);
+    bindDragEvent(img);
+}
+
+function bindDragEvent(img) {
+    img.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        startDrag(img.src, e.touches[0]);
+    }, { passive: false });
+}
+
+function startDrag(src, touch) {
+    dragImage = document.createElement('img');
+    dragImage.src = src;
+    dragImage.style.cssText = `
+        position: fixed;
+        width: 55px;
+        height: 55px;
+        object-fit: cover;
+        border-radius: 4px;
+        pointer-events: none;
+        z-index: 9999;
+    `;
+    document.body.appendChild(dragImage);
+    moveDragImage(touch);
+
+    function onMove(e) {
+        e.preventDefault();
+        moveDragImage(e.touches[0]);
+    }
+
+    function onEnd(e) {
+        const endTouch = e.changedTouches[0];
+        const target = document.elementFromPoint(endTouch.clientX, endTouch.clientY);
+
+        if (target && target.classList.contains('area')) {
+            const clone = document.createElement('img');
+            clone.src = src;
+            target.appendChild(clone);
+            currentIndex++;
+            showNextImage();
+        }
+
+        if (dragImage && dragImage.parentNode) {
+            document.body.removeChild(dragImage);
+        }
+        dragImage = null;
+
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+    }
+
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+}
+
+function moveDragImage(touch) {
+    if (!dragImage) return;
+    dragImage.style.left = (touch.clientX - 27) + 'px';
+    dragImage.style.top = (touch.clientY - 27) + 'px';
+}
+
+resetBtn.addEventListener('click', function() {
+    images = [];
+    currentIndex = 0;
+    previewBox.innerHTML = '';
+    tierAreas.forEach(area => area.innerHTML = '');
+    fileInput.value = '';
+});
+</script>
 </body>
 </html>
